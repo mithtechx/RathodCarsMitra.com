@@ -77,6 +77,73 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
     return 'RC-2026-$randomNum';
   }
 
+  // Opens the detailed Terms & Conditions & Privacy Policy dialog inside the app
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Terms & Conditions & Privacy Policy',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: const Text(
+              '''RATHOD CARS MITRA (RCM)
+TERMS AND CONDITIONS & PRIVACY POLICY
+Last Updated and Effective Date: September 27, 2026
+
+Welcome to Rathod Cars Mitra (“RCM,” “we,” “our,” or “us”). Please read these Terms and Conditions (“Terms”) carefully before using the RCM mobile application or web platform (rathodcarsmitra.com).
+
+1. Nature of Service and Platform Role
+Technology Intermediary: RCM operates strictly as a digital technology platform and booking aggregator connecting individual passengers with independent commercial cab operators and drivers (“Drivers”). RCM is not a transportation carrier.
+
+2. Eligibility and User Accounts
+You must be at least 18 years of age and legally competent under the Indian Contract Act, 1872, to use this platform. You agree to provide accurate registration and contact info.
+
+3. Bookings, Fares, and Pricing Policy
+Base fares and distance calculations are synchronized through our centralized database. In case of technical display anomalies, pricing reflected in RCM's backend database during booking confirmation shall prevail.
+
+4. Payments, Advance Deposits, and Dynamic UPI Compliance
+Advance Payment Structure: Passengers are required to pay a 50% advance via official business dynamic UPI QR codes. The balance is paid directly to the driver. 
+Manual UTR Verification: Bookings are officially confirmed only after RCM’s operations team reconciles the submitted 12-digit UTR against incoming business bank statements. RCM is not liable for issues arising from incorrect UTR entries or payments sent to personal accounts.
+
+5. Cancellations and Refunds
+Cancellations are subject to active platform policies. Fraudulent chargebacks after completed rides will result in blacklisting and legal recourse.
+
+6. Independent Drivers and Legal Liabilities
+Drivers operate as independent contractors, not employees of RCM. Drivers are solely responsible for vehicle fitness, valid permits, PUC, insurance, and statutory compliance. RCM is not liable for traffic violations or on-road incidents.
+
+7. Privacy & Data Handling
+We collect necessary personal data (phone numbers, names, pickup/drop locations, and payment UTR records) solely to process bookings, communicate updates via WhatsApp/SMS, and maintain security logs. We do not sell user data.
+
+8. Limitation of Liability
+Passengers travel at their own risk. RCM is not responsible for transit delays, mechanical breakdowns, loss of luggage, or accidents occurring on-road.
+
+9. Governing Law
+These Terms are governed by the laws of India, with exclusive jurisdiction in Maharashtra.
+
+By accessing or using our platform, you signify your agreement to be bound by these Terms. If you do not agree to all of these Terms, do not use our application or services.''',
+              style: TextStyle(fontSize: 12, height: 1.4, color: Colors.black87),
+            ),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submitBooking() async {
     setState(() => _isLoading = true);
     try {
@@ -91,7 +158,6 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
       final phone = _phoneController.text.trim();
       final utr = _utrController.text.trim();
 
-      // Insert booking into Supabase database
       await supabase.from('bookings').insert({
         'pnr_number': pnrNumber,
         'passenger_name': primaryPassengerName,
@@ -109,7 +175,6 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
 
       if (!mounted) return;
 
-      // Show Clean Success Popup Dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -262,7 +327,7 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
 
               const SizedBox(height: 20),
 
-              // Passengers Section (Dynamic per seat)
+              // Passengers Section
               Text(
                 isFullCab ? 'Primary Passenger Details' : 'Passenger Details (${_passengers.length} seat(s))',
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -425,6 +490,8 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
               ),
 
               const SizedBox(height: 12),
+              
+              // Interactive Terms & Conditions Checkbox Row
               Row(
                 children: [
                   Checkbox(
@@ -433,9 +500,18 @@ class _PassengerPaymentScreenState extends State<PassengerPaymentScreen> {
                     onChanged: (val) =>
                         setState(() => _acceptTerms = val ?? false),
                   ),
-                  const Expanded(
-                    child: Text('I agree to the Terms & Conditions',
-                        style: TextStyle(fontSize: 12)),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _showTermsDialog,
+                      child: const Text(
+                        'I agree to the Terms & Conditions & Privacy Policy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
                   )
                 ],
               ),

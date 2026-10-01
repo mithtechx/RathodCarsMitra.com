@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CustomRouteScreen extends StatefulWidget {
   const CustomRouteScreen({super.key});
@@ -19,27 +20,71 @@ class _CustomRouteScreenState extends State<CustomRouteScreen> {
   String _selectedDate = 'Mon, 21 Sep';
   String _selectedTime = '06:00';
 
+  bool _isLoadingPricing = true;
+
+  // Dynamic pricing fetched from Supabase table `pricing_config`
+  double _ac5SeaterRate = 13.0;
+  double _ac7SeaterRate = 22.0;
+  double _nonAc5SeaterRate = 14.0;
+  double _nonAc7SeaterRate = 18.0;
+  double _minKmPerDay = 300.0;
+
   static const primaryColor = Color(0xFFD95325);
   static const fieldBg = Color(0xFFEBE8DF);
 
   final List<String> _dates = ['Mon, 21 Sep', 'Tue, 22 Sep', 'Wed, 23 Sep'];
   final List<String> _times = ['04:00', '06:00', '08:00'];
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchPricingConfig();
+  }
+
+  // Fetch rates dynamically from Supabase `pricing_config` table[cite: 3]
+  Future<void> _fetchPricingConfig() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.from('pricing_config').select('config_key, config_value');
+
+      if (response != null) {
+        for (var row in response) {
+          final key = row['config_key']?.toString();
+          final val = double.tryParse(row['config_value']?.toString() ?? '0') ?? 0.0;
+
+          setState(() {
+            if (key == 'ac_5seater_rate') _ac5SeaterRate = val;
+            if (key == 'ac_7seater_rate') _ac7SeaterRate = val;
+            if (key == 'nonac_5seater_rate') _nonAc5SeaterRate = val;
+            if (key == 'nonac_7seater_rate') _nonAc7SeaterRate = val;
+            if (key == 'min_km_per_day') _minKmPerDay = val;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching pricing config from Supabase: $e');
+    } finally {
+      setState(() {
+        _isLoadingPricing = false;
+      });
+    }
+  }
+
   double get _enteredDistance {
     return double.tryParse(_distanceController.text) ?? 0.0;
   }
 
-  // Minimum billing rule: 300 km/day
+  // Minimum billing rule based on dynamic database value
   double get _billableDistance {
-    final minRule = _days * 300.0;
+    final minRule = _days * _minKmPerDay;
     return _enteredDistance > minRule ? _enteredDistance : minRule;
   }
 
   double get _ratePerKm {
     if (_acType == 'AC') {
-      return _seatType == '7 Seater' ? 22.0 : 18.0;
+      return _seatType == '7 Seater' ? _ac7SeaterRate : _ac5SeaterRate;
     } else {
-      return _seatType == '7 Seater' ? 18.0 : 14.0;
+      return _seatType == '7 Seater' ? _nonAc7SeaterRate : _nonAc5SeaterRate;
     }
   }
 
@@ -63,10 +108,10 @@ class _CustomRouteScreenState extends State<CustomRouteScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: CircleAvatar(
+          icon: const CircleAvatar(
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,
-            child: const Icon(Icons.arrow_back, size: 18),
+            child: Icon(Icons.arrow_back, size: 18),
           ),
           onPressed: () => context.pop(),
         ),
@@ -261,9 +306,20 @@ class _CustomRouteScreenState extends State<CustomRouteScreen> {
             ),
 
             const SizedBox(height: 24),
-            const Text(
-              'Fare Estimate',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Fare Estimate',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (_isLoadingPricing)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
 
@@ -279,7 +335,7 @@ class _CustomRouteScreenState extends State<CustomRouteScreen> {
                 children: [
                   _fareRow('Distance entered', '${_enteredDistance.toStringAsFixed(0)} km'),
                   const SizedBox(height: 8),
-                  _fareRow('Minimum billing (${_days * 300} km/day rule)', '${_days * 300} km'),
+                  _fareRow('Minimum billing (${_minKmPerDay.toStringAsFixed(0)} km/day rule)', '${(_days * _minKmPerDay).toStringAsFixed(0)} km'),
                   const SizedBox(height: 8),
                   _fareRow('Billable distance', '${_billableDistance.toStringAsFixed(0)} km'),
                   const SizedBox(height: 8),
