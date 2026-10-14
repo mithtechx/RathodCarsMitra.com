@@ -52,9 +52,10 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
     try {
       final response = await _supabase
           .from('bookings')
-          .select('selected_seats, travel_date, time_slot, booking_status')
-          .eq('travel_date', widget.travelDate)
-          .eq('time_slot', widget.timeSlot);
+          .select('selected_seats, route_id, travel_date, time_slot, booking_status')
+          .eq('route_id', widget.routeId)     // Strict filter for specific route
+          .eq('travel_date', widget.travelDate) // Strict filter for specific date
+          .eq('time_slot', widget.timeSlot);    // Strict filter for specific time slot
 
       Map<String, String> statuses = {};
       for (var row in response) {
