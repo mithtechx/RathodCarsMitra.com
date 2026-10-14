@@ -51,7 +51,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
   String _gender = 'Male';
   bool _acceptedTerms = true;
   bool _isSubmitting = false;
-  final String _upiId = 'rathodcars@upi';
+  final String _upiId = '9765416086-2@ybl';
 
   @override
   void dispose() {
