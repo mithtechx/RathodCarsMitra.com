@@ -161,17 +161,18 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     Text(
                       '1. Passenger Data Collection:\n'
                       'We collect passenger information including full name, mobile number, age, and gender solely for ride allotment, driver allocation, safety verification, and emergency contacts.\n\n'
-                      '2. Advance Payment & Verification (50%):\n'
+                      '2. Ride Booking & Confirmation Policy:\n'
+                      'Placing a booking request does not mean the ride is instantly confirmed. Rides are officially reviewed, accepted, and confirmed by the operator before dispatch.\n\n'
+                      '3. Advance Payment & Verification (50%):\n'
                       'A mandatory 50% advance deposit is required to reserve cab seats. Your 12-digit UPI UTR reference number is recorded in our Supabase database to enable admin verification.\n\n'
-                      '3. Balance Payment Terms:\n'
+                      '4. Balance Payment Terms:\n'
                       'The remaining balance amount must be settled directly with the assigned vehicle driver prior to boarding or upon reaching the journey destination.\n\n'
-                      '4. Cancellation & Refund Policy:\n'
-                      '• Cancellations made 12+ hours before departure: 80% refund of advance deposit.\n'
-                      '• Cancellations within 12 hours of departure: Advance deposit is non-refundable.\n\n'
-                      '5. Safety & Luggage Policy:\n'
-                      'Passengers must respect luggage limits per seat class. RCM reserves the right to cancel bookings if misleading passenger counts or illegal goods are identified.\n\n'
-                      '6. Data Security:\n'
-                      'Your personal details are stored securely under encryption and are never sold or shared with external advertising partners.',
+                      '5. Cancellation, Refund & Charges Policy:\n'
+                      '• Operator Cancellation: If an operator cancels a paid ride, a 100% full refund will be issued.\n'
+                      '• Pre-Confirmation Customer Cancellation: Permitted with a 10% cancellation charge before official confirmation.\n'
+                      '• Post-Confirmation Customer Cancellation: Once confirmed by the operator, cancellations are non-refundable.\n\n'
+                      '6. Safety & Data Security:\n'
+                      'Passengers must respect luggage limits per seat class. Your personal details are stored securely under encryption and are never sold or shared with external advertising partners.',
                       style: TextStyle(fontSize: 13, height: 1.5, color: Colors.black87),
                     ),
                     SizedBox(height: 20),
