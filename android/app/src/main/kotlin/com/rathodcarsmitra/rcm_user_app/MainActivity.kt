@@ -1,4 +1,5 @@
-package com.rathodcarsmitra.rcm_user_app
+
+package com.rathodcarsmitra.app
 
 import io.flutter.embedding.android.FlutterActivity
 
