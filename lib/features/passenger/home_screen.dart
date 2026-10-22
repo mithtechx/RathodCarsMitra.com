@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_colors.dart';
@@ -14,15 +15,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _supabase = Supabase.instance.client;
 
-  // Search State
-  String _fromCity = 'Buldhana';
-  String _toCity = 'Chhatrapati Sambhaji Nagar';
+  // Search State: placeholders are shown initially.
+  String _fromCity = '';
+  String _toCity = '';
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _pnrController = TextEditingController();
 
   bool _isLoadingRoutes = true;
 
-  // Default preloaded fallback routes matching your original configuration
+  // Original fallback cities retained.
   List<String> _cities = [
     'Buldhana',
     'Chhatrapati Sambhaji Nagar',
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Ujjain (Only Round Trip)',
   ];
 
+  // Original fallback routes retained.
   List<Map<String, dynamic>> _configuredRoutes = [
     {
       'from_city': 'Buldhana',
@@ -72,40 +74,76 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
+  // Only hide the city selected in the opposite dropdown.
+  List<String> get _sourceOptions =>
+      _cities.where((city) => city != _toCity).toList();
+
+  List<String> get _destinationOptions =>
+      _cities.where((city) => city != _fromCity).toList();
+
   @override
   void initState() {
     super.initState();
     _fetchRoutesFromDatabase();
   }
 
+  @override
+  void dispose() {
+    _pnrController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchRoutesFromDatabase() async {
     try {
       final response = await _supabase.from('route_prices').select();
+
       if (response != null && (response as List).isNotEmpty) {
         final dbRoutes = List<Map<String, dynamic>>.from(response);
-        
-        // Extract unique cities from DB routes
+
         final Set<String> uniqueCities = {};
         for (var r in dbRoutes) {
-          if (r['from_city'] != null) uniqueCities.add(r['from_city'].toString());
-          if (r['to_city'] != null) uniqueCities.add(r['to_city'].toString());
+          if (r['from_city'] != null) {
+            uniqueCities.add(r['from_city'].toString());
+          }
+          if (r['to_city'] != null) {
+            uniqueCities.add(r['to_city'].toString());
+          }
         }
+
+        if (!mounted) return;
 
         setState(() {
           _configuredRoutes = dbRoutes;
+
           if (uniqueCities.isNotEmpty) {
             _cities = uniqueCities.toList();
-            if (!_cities.contains(_fromCity)) _fromCity = _cities.first;
-            if (!_cities.contains(_toCity)) _toCity = _cities.length > 1 ? _cities[1] : _cities.first;
+
+            // Keep placeholders instead of automatically selecting cities.
+            _fromCity = '';
+            _toCity = '';
           }
+
           _isLoadingRoutes = false;
         });
       } else {
-        setState(() => _isLoadingRoutes = false);
+        if (!mounted) return;
+        setState(() {
+          _fromCity = '';
+          _toCity = '';
+          _isLoadingRoutes = false;
+        });
       }
     } catch (e) {
-      debugPrint('Error fetching database routes, using preloaded fallbacks: $e');
-      setState(() => _isLoadingRoutes = false);
+      debugPrint(
+        'Error fetching database routes, using preloaded fallbacks: $e',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _fromCity = '';
+        _toCity = '';
+        _isLoadingRoutes = false;
+      });
     }
   }
 
@@ -116,6 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 60)),
     );
+
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
@@ -124,17 +163,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatDateShort(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
     final dayName = days[dt.weekday - 1];
     return '$dayName, ${dt.day} ${months[dt.month - 1]}';
   }
 
   Future<void> _trackPNR(BuildContext context) async {
     final pnrInput = _pnrController.text.trim();
+
     if (pnrInput.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a PNR or UTR reference number')),
+        const SnackBar(
+          content: Text('Please enter a PNR or UTR reference number'),
+        ),
       );
       return;
     }
@@ -142,7 +188,11 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primaryOrange)),
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primaryOrange,
+        ),
+      ),
     );
 
     try {
@@ -153,39 +203,68 @@ class _HomeScreenState extends State<HomeScreen> {
           .maybeSingle();
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loader
+      Navigator.pop(context);
 
       if (response == null) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('PNR Not Found', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Text('No booking found matching "$pnrInput". Please verify your entry.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'PNR Not Found',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              'No booking found matching "$pnrInput". Please verify your entry.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK', style: TextStyle(color: AppColors.primaryOrange, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    color: AppColors.primaryOrange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
         );
       } else {
-        final status = (response['booking_status'] ?? 'pending').toString().toUpperCase();
-        final seats = (response['selected_seats'] as List?)?.join(', ') ?? 'N/A';
+        final status =
+            (response['booking_status'] ?? 'pending').toString().toUpperCase();
+        final seats =
+            (response['selected_seats'] as List?)?.join(', ') ?? 'N/A';
 
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('Booking Details (${response['pnr_number'] ?? pnrInput})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Booking Details (${response['pnr_number'] ?? pnrInput})',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _dialogRow('Route', '${response['from_location']} ➔ ${response['to_location']}'),
+                _dialogRow(
+                  'Route',
+                  '${response['from_location']} ➔ ${response['to_location']}',
+                ),
                 _dialogRow('Travel Date', '${response['travel_date']}'),
-                _dialogRow('Time Slot', '${response['time_slot'] ?? '09:00 AM'}'),
+                _dialogRow(
+                  'Time Slot',
+                  '${response['time_slot'] ?? '09:00 AM'}',
+                ),
                 _dialogRow('Seats Selected', seats),
                 _dialogRow('Total Fare', '₹${response['total_fare']}'),
                 _dialogRow('Advance Paid', '₹${response['advance_amount']}'),
@@ -193,17 +272,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Status:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const Text(
+                      'Status:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: status == 'CONFIRMED' ? Colors.green.withOpacity(0.15) : AppColors.primaryOrange.withOpacity(0.15),
+                        color: status == 'CONFIRMED'
+                            ? Colors.green.withOpacity(0.15)
+                            : AppColors.primaryOrange.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         status,
                         style: TextStyle(
-                          color: status == 'CONFIRMED' ? Colors.green : AppColors.primaryOrange,
+                          color: status == 'CONFIRMED'
+                              ? Colors.green
+                              : AppColors.primaryOrange,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -216,7 +308,13 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close', style: TextStyle(color: AppColors.primaryOrange, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    color: AppColors.primaryOrange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -226,7 +324,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error tracking ticket: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Error tracking ticket: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -237,8 +338,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -251,7 +364,43 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     final formattedDateStr =
-        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+        '${_selectedDate.year}-'
+        '${_selectedDate.month.toString().padLeft(2, '0')}-'
+        '${_selectedDate.day.toString().padLeft(2, '0')}';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CabSelectionScreen(
+          fromCity: from,
+          toCity: to,
+          travelDate: formattedDateStr,
+          timeSlot: '09:00 AM',
+        ),
+      ),
+    );
+  }
+
+  void _searchCabs(String formattedDateStr) {
+    if (_fromCity.isEmpty || _toCity.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select source and destination.'),
+        ),
+      );
+      return;
+    }
+
+    if (_fromCity == _toCity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Source and destination cannot be the same city.',
+          ),
+        ),
+      );
+      return;
+    }
 
     Navigator.push(
       context,
@@ -269,14 +418,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final String formattedDateStr =
-        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+        '${_selectedDate.year}-'
+        '${_selectedDate.month.toString().padLeft(2, '0')}-'
+        '${_selectedDate.day.toString().padLeft(2, '0')}';
 
-    final dateOptions = List.generate(4, (index) => DateTime.now().add(Duration(days: index)));
+    final dateOptions = List.generate(
+      4,
+      (index) => DateTime.now().add(Duration(days: index)),
+    );
 
     return Container(
       color: AppColors.bgCream,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 20.0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -301,12 +458,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppColors.primaryOrange,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.directions_car, color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.directions_car,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Text(
                         'Rathod Cars Mitra',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
                       ),
                     ],
                   ),
@@ -317,14 +482,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryOrange,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
                       'Book Full Cab or Per Seat - AC & Non-AC',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -332,10 +504,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
 
-            // "Find your ride" Heading
             const Text(
               'Find your ride',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -350,7 +525,14 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('From', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87)),
+                  const Text(
+                    'From',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -360,20 +542,49 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: _cities.contains(_fromCity) ? _fromCity : _cities.first,
+                        value: _sourceOptions.contains(_fromCity) &&
+                                _fromCity.isNotEmpty
+                            ? _fromCity
+                            : null,
+                        hint: const Text('Select source'),
                         isExpanded: true,
-                        items: _cities
-                            .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontWeight: FontWeight.w600))))
+                        items: _sourceOptions
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(
+                                  c,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _fromCity = val);
+                          if (val != null) {
+                            setState(() {
+                              _fromCity = val;
+
+                              if (_toCity == _fromCity) {
+                                _toCity = '';
+                              }
+                            });
+                          }
                         },
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  const Text('To', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87)),
+                  const Text(
+                    'To',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -383,13 +594,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: _cities.contains(_toCity) ? _toCity : _cities.last,
+                        value: _destinationOptions.contains(_toCity) &&
+                                _toCity.isNotEmpty
+                            ? _toCity
+                            : null,
+                        hint: const Text('Select destination'),
                         isExpanded: true,
-                        items: _cities
-                            .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontWeight: FontWeight.w600))))
+                        items: _destinationOptions
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(
+                                  c,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _toCity = val);
+                          if (val != null) {
+                            setState(() {
+                              _toCity = val;
+
+                              if (_fromCity == _toCity) {
+                                _fromCity = '';
+                              }
+                            });
+                          }
                         },
                       ),
                     ),
@@ -400,14 +633,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Select Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87)),
+                      const Text(
+                        'Select Date',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => _pickFromCalendar(context),
                         child: Row(
                           children: const [
-                            Icon(Icons.calendar_month, size: 16, color: AppColors.primaryOrange),
+                            Icon(
+                              Icons.calendar_month,
+                              size: 16,
+                              color: AppColors.primaryOrange,
+                            ),
                             SizedBox(width: 4),
-                            Text('Pick from Calendar', style: TextStyle(color: AppColors.primaryOrange, fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(
+                              'Pick from Calendar',
+                              style: TextStyle(
+                                color: AppColors.primaryOrange,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -420,21 +671,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: dateOptions.map((date) {
-                        final isSelected = _selectedDate.day == date.day && _selectedDate.month == date.month;
+                        final isSelected =
+                            _selectedDate.day == date.day &&
+                            _selectedDate.month == date.month;
+
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: GestureDetector(
                             onTap: () => setState(() => _selectedDate = date),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.primaryOrange : const Color(0xFFEFEDE6),
+                                color: isSelected
+                                    ? AppColors.primaryOrange
+                                    : const Color(0xFFEFEDE6),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 _formatDateShort(date),
                                 style: TextStyle(
-                                  color: isSelected ? Colors.white : Colors.black87,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black87,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
@@ -454,25 +715,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryOrange,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CabSelectionScreen(
-                              fromCity: _fromCity,
-                              toCity: _toCity,
-                              travelDate: formattedDateStr,
-                              timeSlot: '09:00 AM',
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: () => _searchCabs(formattedDateStr),
                       child: const Text(
                         'Search Cabs',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
                       ),
                     ),
                   ),
@@ -482,7 +737,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             // Custom Route Booking Card
-            const Text('Custom Route Booking', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const Text(
+              'Custom Route Booking',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 10),
             InkWell(
               onTap: () {
@@ -507,20 +769,40 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.primaryOrange,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.alt_route, color: Colors.white, size: 24),
+                      child: const Icon(
+                        Icons.alt_route,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('Anywhere to anywhere', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            'Anywhere to anywhere',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           SizedBox(height: 2),
-                          Text('Per-km rates - pay only for distance travelled', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          Text(
+                            'Per-km rates - pay only for distance travelled',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                   ],
                 ),
               ),
@@ -528,7 +810,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             // Track by PNR
-            const Text('Track by PNR', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const Text(
+              'Track by PNR',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(16),
@@ -550,7 +839,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         decoration: const InputDecoration(
                           hintText: 'Enter your PNR or UTR e.g. RC-2026-...',
                           border: InputBorder.none,
-                          hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ),
@@ -559,11 +851,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E1E1E),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                     ),
                     onPressed: () => _trackPNR(context),
-                    child: const Text('Track', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Track',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -571,7 +874,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             // Configured Routes (From Admin Database)
-            const Text('Configured Routes (Live from Admin)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const Text(
+              'Configured Routes (Live from Admin)',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 10),
 
             Column(
@@ -579,10 +889,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 final from = route['from_city'] ?? '';
                 final to = route['to_city'] ?? '';
                 final fare = route['fare'] ?? route['price'] ?? 0;
-                final fullCab = route['fullCab'] ?? (fare is num ? fare * 4 : 2400);
+                final fullCab =
+                    route['fullCab'] ?? (fare is num ? fare * 4 : 2400);
 
                 return InkWell(
-                  onTap: () => _selectConfiguredRoute(from, to),
+                  onTap: () => _selectConfiguredRoute(
+                    from.toString(),
+                    to.toString(),
+                  ),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(16),
@@ -598,18 +912,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               '$from ➔ $to',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Seat: ₹$fare | Full Cab: ₹$fullCab',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
                         Text(
                           '₹$fare',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryOrange),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppColors.primaryOrange,
+                          ),
                         ),
                       ],
                     ),
