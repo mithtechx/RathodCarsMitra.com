@@ -1,9 +1,12 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../core/constants/app_colors.dart';
+import 'my_bookings_screen.dart';
 
 class CheckoutPaymentScreen extends StatefulWidget {
   final String routeId;
@@ -31,11 +34,12 @@ class CheckoutPaymentScreen extends StatefulWidget {
     double? advanceAmount,
   })  : vehicleType = vehicleType ?? vehicleCategory ?? 'Sedan',
         totalFare = totalFare ?? totalPrice ?? 0.0,
-        // STRICT 50% ADVANCE CALCULATION (No hardcoded minimums)
-        advanceAmount = advanceAmount ?? ((totalFare ?? totalPrice ?? 0.0) * 0.5);
+        advanceAmount =
+            advanceAmount ?? ((totalFare ?? totalPrice ?? 0.0) * 0.5);
 
   @override
-  State<CheckoutPaymentScreen> createState() => _CheckoutPaymentScreenState();
+  State<CheckoutPaymentScreen> createState() =>
+      _CheckoutPaymentScreenState();
 }
 
 class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
@@ -51,6 +55,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
   String _gender = 'Male';
   bool _acceptedTerms = true;
   bool _isSubmitting = false;
+
   final String _upiId = '9765416086-2@ybl';
 
   @override
@@ -65,13 +70,18 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
 
   String get _generateUpiUrl {
     final amount = widget.advanceAmount.toStringAsFixed(2);
-    final note = Uri.encodeComponent('RCM Advance Booking - ${widget.fromCity} to ${widget.toCity}');
-    return 'upi://pay?pa=$_upiId&pn=Rathod%20Cars%20Mitra&am=$amount&cu=INR&tn=$note';
+    final note = Uri.encodeComponent(
+      'RCM Advance Booking - ${widget.fromCity} to ${widget.toCity}',
+    );
+
+    return 'upi://pay?pa=$_upiId'
+        '&pn=Rathod%20Cars%20Mitra'
+        '&am=$amount&cu=INR&tn=$note';
   }
 
   Future<void> _launchUpiApp(String appScheme) async {
     final upiUrl = _generateUpiUrl;
-    Uri uri;
+    late final Uri uri;
 
     if (appScheme == 'gpay') {
       uri = Uri.parse(upiUrl.replaceFirst('upi://', 'gpay://upi/'));
@@ -87,13 +97,20 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        await launchUrl(Uri.parse(upiUrl), mode: LaunchMode.externalApplication);
+        await launchUrl(
+          Uri.parse(upiUrl),
+          mode: LaunchMode.externalApplication,
+        );
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not open payment app directly. Please scan the QR code or copy the UPI ID.'),
+          content: Text(
+            'Could not open the payment app. Please scan the QR code '
+            'or copy the UPI ID.',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -102,6 +119,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
 
   void _copyUpiId() {
     Clipboard.setData(ClipboardData(text: _upiId));
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('UPI ID copied to clipboard!'),
@@ -134,13 +152,21 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Privacy Policy & Terms of Service',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  const Expanded(
+                    child: Text(
+                      'Privacy Policy & Terms of Service',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -150,30 +176,53 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               ),
             ),
             const Divider(height: 1),
-            Expanded(
+            const Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Rathod Cars Mitra (RCM) Terms & Privacy Policy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryOrange)),
+                  children: [
+                    Text(
+                      'Rathod Cars Mitra (RCM) Terms & Privacy Policy',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.primaryOrange,
+                      ),
+                    ),
                     SizedBox(height: 12),
                     Text(
                       '1. Passenger Data Collection:\n'
-                      'We collect passenger information including full name, mobile number, age, and gender solely for ride allotment, driver allocation, safety verification, and emergency contacts.\n\n'
+                      'We collect passenger information including full name, '
+                      'mobile number, age, and gender for ride allotment, '
+                      'driver allocation, safety verification, and emergency '
+                      'contacts.\n\n'
                       '2. Ride Booking & Confirmation Policy:\n'
-                      'Placing a booking request does not mean the ride is instantly confirmed. Rides are officially reviewed, accepted, and confirmed by the operator before dispatch.\n\n'
+                      'Placing a booking request does not mean the ride is '
+                      'instantly confirmed. Rides are reviewed, accepted, '
+                      'and confirmed by the operator before dispatch.\n\n'
                       '3. Advance Payment & Verification (50%):\n'
-                      'A mandatory 50% advance deposit is required to reserve cab seats. Your 12-digit UPI UTR reference number is recorded in our Supabase database to enable admin verification.\n\n'
+                      'A 50% advance deposit is required to reserve cab seats. '
+                      'Your UPI UTR reference number is recorded for admin '
+                      'verification.\n\n'
                       '4. Balance Payment Terms:\n'
-                      'The remaining balance amount must be settled directly with the assigned vehicle driver prior to boarding or upon reaching the journey destination.\n\n'
+                      'The remaining balance is settled directly with the '
+                      'assigned vehicle driver according to the booking terms.\n\n'
                       '5. Cancellation, Refund & Charges Policy:\n'
-                      '• Operator Cancellation: If an operator cancels a paid ride, a 100% full refund will be issued.\n'
-                      '• Pre-Confirmation Customer Cancellation: Permitted with a 10% cancellation charge before official confirmation.\n'
-                      '• Post-Confirmation Customer Cancellation: Once confirmed by the operator, cancellations are non-refundable.\n\n'
+                      'Operator cancellation: a full refund will be issued '
+                      'for a paid ride.\n'
+                      'Pre-confirmation customer cancellation: a 10% '
+                      'cancellation charge may apply.\n'
+                      'Post-confirmation customer cancellation: refunds are '
+                      'subject to the applicable cancellation policy.\n\n'
                       '6. Safety & Data Security:\n'
-                      'Passengers must respect luggage limits per seat class. Your personal details are stored securely under encryption and are never sold or shared with external advertising partners.',
-                      style: TextStyle(fontSize: 13, height: 1.5, color: Colors.black87),
+                      'Passenger details are used to manage bookings and '
+                      'related safety requirements.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Colors.black87,
+                      ),
                     ),
                     SizedBox(height: 20),
                   ],
@@ -181,17 +230,25 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryOrange,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('I Understand & Agree', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'I Understand & Agree',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -207,7 +264,9 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     if (!_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please accept the Privacy Policy and Terms of Service to proceed.'),
+          content: Text(
+            'Please accept the Privacy Policy and Terms of Service.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -223,7 +282,9 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final pnrNumber = 'RC-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+      final pnrNumber =
+          'RC-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+
       final balance = widget.totalFare - widget.advanceAmount;
 
       await _supabase.from('bookings').insert({
@@ -249,18 +310,27 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
 
       if (!mounted) return;
 
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Column(
             children: [
-              Icon(Icons.check_circle_rounded, color: Colors.green, size: 54),
+              Icon(
+                Icons.check_circle_rounded,
+                color: Colors.green,
+                size: 54,
+              ),
               SizedBox(height: 12),
               Text(
                 'Booking Submitted!',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -270,13 +340,22 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
             children: [
               Text(
                 'PNR Ref: $pnrNumber',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryOrange),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: AppColors.primaryOrange,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Your advance payment of ₹${widget.advanceAmount.toStringAsFixed(0)} (50%) with UTR $utr is submitted for verification.',
+                'Your advance payment of '
+                '₹${widget.advanceAmount.toStringAsFixed(0)} '
+                'with UTR $utr has been submitted for verification.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 12),
               Container(
@@ -287,8 +366,13 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                   border: Border.all(color: Colors.orange.shade200),
                 ),
                 child: Text(
-                  'Balance Due at Boarding: ₹${balance.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.orange),
+                  'Balance Due at Boarding: '
+                  '₹${balance.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.orange,
+                  ),
                 ),
               ),
             ],
@@ -300,13 +384,30 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryOrange,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  // Close the confirmation dialog first.
+                  Navigator.of(dialogContext).pop();
+
+                  // Open My Bookings directly instead of returning
+                  // to the first screen in the navigation stack.
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MyBookingsScreen(),
+                    ),
+                    (route) => route.isFirst,
+                  );
                 },
-                child: const Text('Go to Home / My Bookings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Go to My Bookings',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -314,6 +415,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error submitting booking: $e'),
@@ -321,13 +423,15 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double balance = widget.totalFare - widget.advanceAmount;
+    final balance = widget.totalFare - widget.advanceAmount;
 
     return Scaffold(
       backgroundColor: AppColors.bgCream,
@@ -337,7 +441,11 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
         leading: const BackButton(color: Colors.white),
         title: const Text(
           'Checkout & Payment',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -350,7 +458,6 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ride Summary Card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -372,14 +479,20 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                             Expanded(
                               child: Text(
                                 '${widget.fromCity} ➔ ${widget.toCity}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primaryOrange.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
@@ -396,100 +509,120 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                           ],
                         ),
                         const Divider(height: 24),
-                        _infoRow('Date & Time', '${widget.travelDate} (${widget.timeSlot})'),
-                        _infoRow('Selected Seats', widget.selectedSeats.join(', ')),
-                        _infoRow('Total Fare', '₹${widget.totalFare.toStringAsFixed(0)}'),
-                        _infoRow('Advance Payable (50%)', '₹${widget.advanceAmount.toStringAsFixed(0)}', isHighlight: true),
-                        _infoRow('Balance at Boarding', '₹${balance.toStringAsFixed(0)}'),
+                        _infoRow(
+                          'Date & Time',
+                          '${widget.travelDate} (${widget.timeSlot})',
+                        ),
+                        _infoRow(
+                          'Selected Seats',
+                          widget.selectedSeats.join(', '),
+                        ),
+                        _infoRow(
+                          'Total Fare',
+                          '₹${widget.totalFare.toStringAsFixed(0)}',
+                        ),
+                        _infoRow(
+                          'Advance Payable (50%)',
+                          '₹${widget.advanceAmount.toStringAsFixed(0)}',
+                          isHighlight: true,
+                        ),
+                        _infoRow(
+                          'Balance at Boarding',
+                          '₹${balance.toStringAsFixed(0)}',
+                        ),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-                  const Text('Passenger Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 12),
-
-                  TextFormField(
-                    controller: _nameController,
-                    validator: (val) => val == null || val.trim().isEmpty ? 'Please enter passenger full name' : null,
-                    decoration: InputDecoration(
-                      labelText: 'Full Name *',
-                      hintText: 'Enter full name',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const Text(
+                    'Passenger Information',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 12),
-
+                  TextFormField(
+                    controller: _nameController,
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty
+                            ? 'Please enter passenger full name'
+                            : null,
+                    decoration: _inputDecoration(
+                      label: 'Full Name *',
+                      hint: 'Enter full name',
+                      icon: Icons.person_outline,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     maxLength: 10,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) return 'Please enter mobile number';
-                      if (val.trim().length != 10) return 'Must be a 10-digit mobile number';
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (value) {
+                      final phone = value?.trim() ?? '';
+                      if (phone.isEmpty) {
+                        return 'Please enter mobile number';
+                      }
+                      if (phone.length != 10) {
+                        return 'Must be a 10-digit mobile number';
+                      }
                       return null;
                     },
-                    decoration: InputDecoration(
-                      labelText: '10-Digit Mobile Number *',
-                      hintText: 'Enter 10-digit mobile number',
-                      prefixIcon: const Icon(Icons.phone_android_outlined),
-                      counterText: '',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                    decoration: _inputDecoration(
+                      label: '10-Digit Mobile Number *',
+                      hint: 'Enter 10-digit mobile number',
+                      icon: Icons.phone_android_outlined,
+                    ).copyWith(counterText: ''),
                   ),
                   const SizedBox(height: 12),
-
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email ID (Optional)',
-                      hintText: 'e.g., name@example.com',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    decoration: _inputDecoration(
+                      label: 'Email ID (Optional)',
+                      hint: 'e.g., name@example.com',
+                      icon: Icons.email_outlined,
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Age Input
                       Expanded(
-                        flex: 1,
                         child: TextFormField(
                           controller: _ageController,
                           keyboardType: TextInputType.number,
                           maxLength: 3,
-                          validator: (val) {
-                            if (val == null || val.trim().isEmpty) return 'Enter age';
-                            if (int.tryParse(val.trim()) == null) return 'Invalid';
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (value) {
+                            final age = int.tryParse(value?.trim() ?? '');
+                            if (age == null) return 'Enter valid age';
+                            if (age < 1 || age > 120) {
+                              return 'Enter age 1–120';
+                            }
                             return null;
                           },
-                          decoration: InputDecoration(
-                            labelText: 'Age *',
-                            hintText: 'e.g., 25',
-                            prefixIcon: const Icon(Icons.cake_outlined),
-                            counterText: '',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
+                          decoration: _inputDecoration(
+                            label: 'Age *',
+                            hint: 'e.g., 25',
+                            icon: Icons.cake_outlined,
+                          ).copyWith(counterText: ''),
                         ),
                       ),
                       const SizedBox(width: 12),
-
-                      // Gender Selection
                       Expanded(
                         flex: 2,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -498,26 +631,44 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Gender *', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: ['Male', 'Female', 'Others'].map((genderOption) {
-                                  final isSelected = _gender == genderOption;
+                              const Text(
+                                'Gender *',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: ['Male', 'Female', 'Others']
+                                    .map((option) {
+                                  final selected = _gender == option;
+
                                   return GestureDetector(
-                                    onTap: () => setState(() => _gender = genderOption),
+                                    onTap: () {
+                                      setState(() => _gender = option);
+                                    },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isSelected ? AppColors.primaryOrange : Colors.grey.shade100,
+                                        color: selected
+                                            ? AppColors.primaryOrange
+                                            : Colors.grey.shade100,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        genderOption,
+                                        option,
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: isSelected ? Colors.white : Colors.black87,
+                                          color: selected
+                                              ? Colors.white
+                                              : Colors.black87,
                                         ),
                                       ),
                                     ),
@@ -530,25 +681,45 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 28),
-                  const Text('Pay Advance Deposit (50%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Pay Advance Deposit (50%)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  const Text('Pay using any UPI App or Scan QR code below', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  const Text(
+                    'Pay using any UPI app or scan the QR code below.',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
-                      _upiAppButton('GPay', Colors.blue.shade700, () => _launchUpiApp('gpay')),
+                      _upiAppButton(
+                        'GPay',
+                        Colors.blue.shade700,
+                        () => _launchUpiApp('gpay'),
+                      ),
                       const SizedBox(width: 8),
-                      _upiAppButton('PhonePe', Colors.purple.shade700, () => _launchUpiApp('phonepe')),
+                      _upiAppButton(
+                        'PhonePe',
+                        Colors.purple.shade700,
+                        () => _launchUpiApp('phonepe'),
+                      ),
                       const SizedBox(width: 8),
-                      _upiAppButton('Paytm', Colors.lightBlue.shade800, () => _launchUpiApp('paytm')),
+                      _upiAppButton(
+                        'Paytm',
+                        Colors.lightBlue.shade800,
+                        () => _launchUpiApp('paytm'),
+                      ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
-
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -560,23 +731,40 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Advance Amount (50%): ₹${widget.advanceAmount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primaryOrange),
+                          'Advance Amount (50%): '
+                          '₹${widget.advanceAmount.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppColors.primaryOrange,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         QrImageView(
                           data: _generateUpiUrl,
                           version: QrVersions.auto,
-                          size: 190.0,
+                          size: 190,
                           backgroundColor: Colors.white,
                         ),
                         const SizedBox(height: 14),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('UPI ID: $_upiId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Flexible(
+                              child: Text(
+                                'UPI ID: $_upiId',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                             IconButton(
-                              icon: const Icon(Icons.copy, size: 18, color: AppColors.primaryOrange),
+                              icon: const Icon(
+                                Icons.copy,
+                                size: 18,
+                                color: AppColors.primaryOrange,
+                              ),
                               onPressed: _copyUpiId,
                               tooltip: 'Copy UPI ID',
                             ),
@@ -585,46 +773,57 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-                  const Text('Verify Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Verify Payment',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-
                   TextFormField(
                     controller: _utrController,
                     keyboardType: TextInputType.number,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) return 'Please enter 12-digit UTR number';
-                      if (val.trim().length < 8) return 'Enter a valid UTR / Ref reference number';
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (value) {
+                      final utr = value?.trim() ?? '';
+                      if (utr.isEmpty) {
+                        return 'Please enter UTR / reference number';
+                      }
+                      if (utr.length < 8 || utr.length > 20) {
+                        return 'Enter a valid UTR / reference number';
+                      }
                       return null;
                     },
-                    decoration: InputDecoration(
-                      labelText: '12-Digit UTR / UPI Transaction Ref Number *',
-                      hintText: 'e.g., 428191919282',
-                      prefixIcon: const Icon(Icons.receipt_long_outlined),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    decoration: _inputDecoration(
+                      label: 'UTR / UPI Transaction Reference *',
+                      hint: 'e.g., 428191919282',
+                      icon: Icons.receipt_long_outlined,
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Modal-Linked Privacy Policy Checkbox
                   Row(
                     children: [
                       Checkbox(
                         value: _acceptedTerms,
                         activeColor: AppColors.primaryOrange,
-                        onChanged: (val) {
-                          if (val != null) setState(() => _acceptedTerms = val);
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _acceptedTerms = value);
+                          }
                         },
                       ),
                       Expanded(
                         child: Wrap(
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            const Text('I agree to the ', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                            const Text(
+                              'I agree to the ',
+                              style: TextStyle(fontSize: 12),
+                            ),
                             GestureDetector(
                               onTap: _openPrivacyPolicyModal,
                               child: const Text(
@@ -637,13 +836,15 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                                 ),
                               ),
                             ),
-                            const Text(' & Ride Terms', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                            const Text(
+                              ' & Ride Terms',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -651,14 +852,22 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryOrange,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: _isSubmitting ? null : _submitBooking,
                       child: _isSubmitting
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
                           : const Text(
                               'Confirm & Submit Booking',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                     ),
                   ),
@@ -672,13 +881,40 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value, {bool isHighlight = false}) {
+  InputDecoration _inputDecoration({
+    required String label,
+    required String hint,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+
+  Widget _infoRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+            ),
+          ),
           Flexible(
             child: Text(
               value,
@@ -686,7 +922,9 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
-                color: isHighlight ? AppColors.primaryOrange : Colors.black87,
+                color: isHighlight
+                    ? AppColors.primaryOrange
+                    : Colors.black87,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -696,18 +934,28 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     );
   }
 
-  Widget _upiAppButton(String label, Color color, VoidCallback onTap) {
+  Widget _upiAppButton(
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         onPressed: onTap,
         child: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
         ),
       ),
     );
